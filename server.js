@@ -33,17 +33,17 @@ async function getYoutubeDescription(videoId) {
       const apiData = await apiRes.json();
 
       if (apiData.error) {
-        console.warn('⚠️ YouTube Data API error:', apiData.error.message);
+        console.log('⚠️ YouTube Data API error:', apiData.error.message);
       } else {
         const description = apiData.items?.[0]?.snippet?.description;
         if (description) {
           console.log('✅ Deskripsi didapat via YouTube Data API.');
           return description;
         }
-        console.warn('⚠️ YouTube Data API sukses tapi video/deskripsi tidak ditemukan.');
+        console.log('⚠️ YouTube Data API sukses tapi video/deskripsi tidak ditemukan.');
       }
     } catch (err) {
-      console.error('⚠️ YouTube Data API gagal dipanggil:', err.message);
+      console.log('⚠️ YouTube Data API gagal dipanggil:', err.message);
     }
   } else {
     console.log('ℹ️ YOUTUBE_API_KEY belum diset, langsung pakai scrape HTML.');
@@ -62,13 +62,13 @@ async function getYoutubeDescription(videoId) {
       return data.videoDetails?.shortDescription || '';
     }
 
-    console.warn(
+    console.log(
       '⚠️ Scrape gagal: pola ytInitialPlayerResponse tidak ditemukan di HTML — kemungkinan server diblokir/di-redirect ke halaman consent oleh YouTube. Status response:',
       response.status,
     );
     return '';
   } catch (err) {
-    console.error('Gagal membedah HTML YouTube:', err.message);
+    console.log('❌ Gagal membedah HTML YouTube:', err.message);
     return '';
   }
 }
