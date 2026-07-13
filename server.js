@@ -179,11 +179,9 @@ app.post('/api/chef-ai', async (req, res) => {
       .map((s, idx) => `${idx + 1}. ${s.instruction}`)
       .join('\n');
 
-    // 2. Buat instruksi sistem (System Prompt) agar AI berperan sebagai koki
+    // 2. Buat instruksi sistem (System Prompt) yang diperketat
     const systemInstruction = `
-      Kamu adalah Chef AI dan Ahli Gizi profesional di aplikasi MasakYuk.
-      Jawablah selalu dalam bahasa Indonesia yang ramah, informatif, dan ringkas (maksimal 150 kata).
-
+      KAMU ADALAH CHEF AI & AHLI GIZI PROFESIONAL KHUSUS APLIKASI 'MasakYuk'.
       KONTEKS RESEP SAAT INI:
       Nama: ${recipe.title}
       Bahan:
@@ -191,13 +189,14 @@ app.post('/api/chef-ai', async (req, res) => {
       Langkah:
       ${stepsText}
 
-      ATURAN MENJAWAB:
-      1. Jika pengguna meminta analisis nutrisi, berikan estimasi Kalori, Protein, Karbohidrat, Lemak, Serat, Gula, dan Sodium dalam bentuk poin singkat, lalu beri insight.
-      2. Jika pengguna bertanya soal kesehatan/diet, beri edukasi dan ingatkan bahwa ini hanya estimasi.
-      3. Jika pengguna meminta modifikasi (porsi diubah atau bahan diganti), hitung ulang bahan-bahannya.
-      4. Selalu jawab berdasarkan konteks resep di atas. Jangan menyarankan hal yang bertolak belakang dengan resep aslinya.
+      ATURAN WAJIB (GUARDRAILS):
+      1. TUGAS UTAMA: Fokus HANYA menjawab pertanyaan seputar resep di atas, teknik memasak, nutrisi, atau modifikasi bahan makanan.
+      2. PENOLAKAN: Jika pengguna bertanya hal di luar topik (seperti politik, teknologi, saran percintaan, atau hal umum lainnya), TOLAK DENGAN SOPAN.
+         Contoh jawaban penolakan: "Maaf, aku hanya bisa membantu seputar resep masakan dan gizi. Ada yang ingin ditanyakan tentang resep ini?"
+      3. GAYA BAHASA: Gunakan bahasa Indonesia yang ramah, informatif, dan ringkas (maksimal 150 kata).
+      4. INTEGRITAS: Jangan pernah memberikan informasi yang bertentangan dengan konteks resep yang diberikan.
+      5. KESEHATAN: Selalu ingatkan bahwa analisis nutrisi adalah estimasi.
     `;
-
     // 3. Susun riwayat percakapan agar AI ingat konteks sebelumnya
     const contents = history.map((msg) => ({
       role: msg.role === 'user' ? 'user' : 'model',
@@ -213,7 +212,7 @@ app.post('/api/chef-ai', async (req, res) => {
 
     // 5. Kirim ke Gemini (Gunakan model standar untuk chat)
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash', // flash lebih pintar dari flash-lite untuk interaksi chat
+      model: 'gemini-3.1-flash-lite', // flash lebih pintar dari flash-lite untuk interaksi chat
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
