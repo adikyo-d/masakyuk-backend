@@ -160,4 +160,70 @@ app.post('/api/generate-recipe', async (req, res) => {
   }
 });
 
+app.post('/api/chef-ai', async (req, res) => {
+  // Frontend akan mengirimkan resep, pesan user, dan riwayat chat (opsional)
+  const { recipe, message, history = [] } = req.body;
+
+  if (!recipe || !recipe.title) {
+    return res.status(400).json({ error: 'Konteks resep tidak valid.' });
+  }
+
+  try {
+    console.log(`Memproses pertanyaan Chef AI untuk resep: ${recipe.title}`);
+
+    // 1. Ubah array bahan dan langkah menjadi teks yang bisa dibaca AI
+    const ingredientsText = recipe.ingredients
+      .map((i) => `- ${i.amount || ''} ${i.name}`)
+      .join('\n');
+    const stepsText = recipe.steps
+      .map((s, idx) => `${idx + 1}. ${s.instruction}`)
+      .join('\n');
+
+    // 2. Buat instruksi sistem (System Prompt) agar AI berperan sebagai koki
+    const systemInstruction = `
+      Kamu adalah Chef AI dan Ahli Gizi profesional di aplikasi MasakYuk.
+      Jawablah selalu dalam bahasa Indonesia yang ramah, informatif, dan ringkas (maksimal 150 kata).
+
+      KONTEKS RESEP SAAT INI:
+      Nama: ${recipe.title}
+      Bahan:
+      ${ingredientsText}
+      Langkah:
+      ${stepsText}
+
+      ATURAN MENJAWAB:
+      1. Jika pengguna meminta analisis nutrisi, berikan estimasi Kalori, Protein, Karbohidrat, Lemak, Serat, Gula, dan Sodium dalam bentuk poin singkat, lalu beri insight.
+      2. Jika pengguna bertanya soal kesehatan/diet, beri edukasi dan ingatkan bahwa ini hanya estimasi.
+      3. Jika pengguna meminta modifikasi (porsi diubah atau bahan diganti), hitung ulang bahan-bahannya.
+      4. Selalu jawab berdasarkan konteks resep di atas. Jangan menyarankan hal yang bertolak belakang dengan resep aslinya.
+    `;
+
+    // 3. Susun riwayat percakapan agar AI ingat konteks sebelumnya
+    const contents = history.map((msg) => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
+
+    // 4. Tambahkan pertanyaan terbaru pengguna
+    // Jika message kosong, anggap pengguna baru membuka bottom sheet dan minta analisis nutrisi awal
+    contents.push({
+      role: 'user',
+      parts: [{ text: message || 'Tolong buatkan analisis nutrisi ringkas untuk resep ini.' }],
+    });
+
+    // 5. Kirim ke Gemini (Gunakan model standar untuk chat)
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash', // flash lebih pintar dari flash-lite untuk interaksi chat
+      contents: contents,
+      config: {
+        systemInstruction: systemInstruction,
+      },
+    });
+
+    res.json({ reply: response.text });
+  } catch (error) {
+    console.error('Error in Chef AI endpoint:', error);
+    res.status(500).json({ error: 'Gagal mendapatkan respon dari Chef AI.' });
+  }
+});
 export default app;
